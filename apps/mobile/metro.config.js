@@ -1,0 +1,23 @@
+const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
+
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, '../..');
+
+const config = getDefaultConfig(projectRoot);
+
+// Watch all files in the monorepo
+config.watchFolders = [workspaceRoot];
+
+// Resolve modules from workspace root first, then project root
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
+];
+
+// Alias @trainly/shared to the local package
+config.resolver.alias = {
+  '@trainly/shared': path.resolve(workspaceRoot, 'packages/shared/src'),
+};
+
+module.exports = config;
