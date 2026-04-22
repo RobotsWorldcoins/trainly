@@ -1,14 +1,4 @@
 {
   "framework": "nextjs",
-  "buildCommand": "pnpm build",
-  "outputDirectory": ".next",
-  "installCommand": "pnpm install",
-  "regions": ["cdg1"],
-  "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@trainly_supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@trainly_supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@trainly_supabase_service_role_key",
-    "STRIPE_SECRET_KEY": "@trainly_stripe_secret_key",
-    "NEXTAUTH_SECRET": "@trainly_nextauth_secret"
-  }
+  "regions": ["cdg1"]
 }
