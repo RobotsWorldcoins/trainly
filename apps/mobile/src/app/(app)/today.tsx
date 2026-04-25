@@ -1,35 +1,79 @@
 import React, { useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO, isToday, isTomorrow } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import Svg, { Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Colors } from '@constants/colors';
 import { FontFamily } from '@constants/typography';
 import { supabase } from '@lib/supabase';
 import { useAuthStore } from '@stores/auth.store';
 
-const GREETINGS = ['Bom dia', 'Boa tarde', 'Boa noite'];
+const { width: SCREEN_W } = Dimensions.get('window');
+const RING_SIZE = 200;
+const RING_CX = RING_SIZE / 2;
+const RING_CY = RING_SIZE / 2;
 
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return GREETINGS[0];
-  if (h < 18) return GREETINGS[1];
-  return GREETINGS[2];
+// ─── Activity Ring component (Apple-style) ─────────────────────────────────
+interface RingProps {
+  progress: number;   // 0–1
+  radius: number;
+  strokeWidth: number;
+  color: string;
+  bgColor: string;
 }
 
-const MOCK_STATS = { steps: 6240, distance: 4.3, calories: 318, xp: 1250, level: 7, xpToNext: 1500 };
+function ActivityRing({ progress, radius, strokeWidth, color, bgColor }: RingProps) {
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - Math.min(progress, 1));
+  const cx = RING_CX;
+  const cy = RING_CY;
+  return (
+    <>
+      {/* Track */}
+      <Circle
+        cx={cx} cy={cy} r={radius}
+        stroke={bgColor} strokeWidth={strokeWidth}
+        fill="none"
+      />
+      {/* Progress */}
+      <Circle
+        cx={cx} cy={cy} r={radius}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeDasharray={`${circumference} ${circumference}`}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        rotation="-90"
+        originX={cx}
+        originY={cy}
+      />
+    </>
+  );
+}
 
-const MOCK_UPCOMING = {
-  id: 'sess_demo',
-  title: 'HIIT ao ar livre',
-  starts_at: new Date(Date.now() + 2 * 3600000).toISOString(),
-  location_name: 'Parque Eduardo VII',
-  category: 'hiit',
-  trainer_name: 'Carlos Mendes',
+// ─── Mock data ─────────────────────────────────────────────────────────────
+const MOCK = {
+  move: { val: 403, goal: 500 },
+  exercise: { val: 42, goal: 30 },
+  stand: { val: 7, goal: 12 },
+  steps: 8_240,
+  distance: 5.8,
+  calories: 403,
+  xp: 1_250, xpGoal: 1_500,
+  level: 7,
+  streak: 5,
+};
+
+const MOCK_NEXT = {
+  id: 'sess_demo', title: 'HIIT ao ar livre', category: 'hiit',
+  starts_at: new Date(Date.now() + 2 * 3_600_000).toISOString(),
+  location_name: 'Parque Eduardo VII', trainer_name: 'Carlos Mendes',
 };
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -38,225 +82,343 @@ const CATEGORY_EMOJI: Record<string, string> = {
   dance: '💃', default: '🏋️',
 };
 
-const QUICK_ACTIONS = [
+const QUICK = [
   { label: 'Explorar', emoji: '🗺️', route: '/(app)/(tabs)/' as const },
   { label: 'Agenda', emoji: '📅', route: '/(app)/(tabs)/agenda' as const },
-  { label: 'Dispositivos', emoji: '⌚', route: '/(app)/devices' as const },
+  { label: 'Wearables', emoji: '⌚', route: '/(app)/devices' as const },
   { label: 'Histórico', emoji: '📊', route: '/(app)/activity-history' as const },
 ];
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+// ─── Screen ────────────────────────────────────────────────────────────────
 export default function TodayScreen() {
   const { profile } = useAuthStore();
-  const displayName = profile?.display_name?.split(' ')[0] ?? 'Atleta';
+  const firstName = profile?.display_name?.split(' ')[0] ?? 'Atleta';
 
   const { data: nextSession } = useQuery({
-    queryKey: ['today-next-session', profile?.id],
+    queryKey: ['today-next', profile?.id],
     queryFn: async () => {
-      if (!profile) return MOCK_UPCOMING;
-      const now = new Date().toISOString();
+      if (!profile) return MOCK_NEXT;
       const { data } = await supabase
         .from('session_participants')
-        .select(`
-          session:sessions(id, title, starts_at, location_name, category,
-            trainer:profiles!trainer_id(display_name))
-        `)
+        .select(`session:sessions(id,title,starts_at,location_name,category,trainer:profiles!trainer_id(display_name))`)
         .eq('user_id', profile.user_id)
         .in('status', ['confirmed', 'pending'])
-        .gte('session.starts_at', now)
+        .gte('session.starts_at', new Date().toISOString())
         .order('session.starts_at', { ascending: true })
         .limit(1);
-      if (data && data.length > 0) {
+      if (data?.length) {
         const s = (data[0] as any).session;
-        return {
-          id: s.id,
-          title: s.title,
-          starts_at: s.starts_at,
-          location_name: s.location_name,
-          category: s.category,
-          trainer_name: s.trainer?.display_name ?? 'Grupo social',
-        };
+        return { id: s.id, title: s.title, starts_at: s.starts_at, location_name: s.location_name, category: s.category, trainer_name: s.trainer?.display_name ?? 'Grupo' };
       }
-      return MOCK_UPCOMING;
+      return MOCK_NEXT;
     },
     enabled: true,
+    staleTime: 60_000,
   });
 
-  const xpProgress = MOCK_STATS.xp / MOCK_STATS.xpToNext;
-
-  const sessionLabel = useMemo(() => {
+  const timeLabel = useMemo(() => {
     if (!nextSession) return '';
     const d = parseISO(nextSession.starts_at);
-    if (isToday(d)) return `Hoje às ${format(d, 'HH:mm')}`;
-    if (isTomorrow(d)) return `Amanhã às ${format(d, 'HH:mm')}`;
-    return format(d, "EEE, d MMM 'às' HH:mm", { locale: pt });
+    if (isToday(d)) return `Hoje · ${format(d, 'HH:mm')}`;
+    if (isTomorrow(d)) return `Amanhã · ${format(d, 'HH:mm')}`;
+    return format(d, "EEE d MMM · HH:mm", { locale: pt });
   }, [nextSession]);
+
+  const movePct   = MOCK.move.val / MOCK.move.goal;
+  const exPct     = MOCK.exercise.val / MOCK.exercise.goal;
+  const standPct  = MOCK.stand.val / MOCK.stand.goal;
+  const xpPct     = MOCK.xp / MOCK.xpGoal;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-        {/* Header greeting */}
+        {/* ── Header ── */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>{getGreeting()}, {displayName} 👋</Text>
-            <Text style={styles.date}>{format(new Date(), "EEEE, d 'de' MMMM", { locale: pt })}</Text>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.name}>{firstName} 👋</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/(app)/(tabs)/profile')} style={styles.avatarBtn}>
-            <Text style={styles.avatarEmoji}>👤</Text>
+            <Text style={styles.avatarLetter}>{firstName[0]?.toUpperCase()}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* XP / Level card */}
+        {/* ── Activity Rings Hero ── */}
+        <View style={styles.ringsCard}>
+          <View style={styles.ringsRow}>
+            {/* SVG rings */}
+            <Svg width={RING_SIZE} height={RING_SIZE}>
+              <Defs>
+                <LinearGradient id="moveGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#FF375F" />
+                  <Stop offset="1" stopColor="#FF6B9D" />
+                </LinearGradient>
+                <LinearGradient id="exGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#A2FD4F" />
+                  <Stop offset="1" stopColor="#30D158" />
+                </LinearGradient>
+                <LinearGradient id="stGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor="#00E5FF" />
+                  <Stop offset="1" stopColor="#0EA5E9" />
+                </LinearGradient>
+              </Defs>
+              {/* Stand — outer */}
+              <ActivityRing progress={standPct} radius={90} strokeWidth={14} color="#0EA5E9" bgColor="rgba(14,165,233,0.18)" />
+              {/* Exercise — middle */}
+              <ActivityRing progress={exPct} radius={72} strokeWidth={14} color="#30D158" bgColor="rgba(48,209,88,0.18)" />
+              {/* Move — inner */}
+              <ActivityRing progress={movePct} radius={54} strokeWidth={14} color="#FF375F" bgColor="rgba(255,55,95,0.18)" />
+            </Svg>
+
+            {/* Ring legend */}
+            <View style={styles.ringsLegend}>
+              <RingRow label="Move" val={MOCK.move.val} goal={MOCK.move.goal} unit="CAL" color="#FF375F" />
+              <RingRow label="Exercício" val={MOCK.exercise.val} goal={MOCK.exercise.goal} unit="MIN" color="#30D158" />
+              <RingRow label="Em pé" val={MOCK.stand.val} goal={MOCK.stand.goal} unit="HRS" color="#0EA5E9" />
+            </View>
+          </View>
+
+          <Text style={styles.ringsMock}>🔧 Demo — liga um wearable para dados reais</Text>
+        </View>
+
+        {/* ── Stats row ── */}
+        <View style={styles.statsRow}>
+          <StatChip emoji="👟" val={MOCK.steps.toLocaleString('pt-PT')} label="Passos" />
+          <StatChip emoji="📍" val={`${MOCK.distance} km`} label="Distância" />
+          <StatChip emoji="🔥" val={`${MOCK.calories}`} label="kcal" />
+        </View>
+
+        {/* ── XP bar ── */}
         <View style={styles.xpCard}>
-          <View style={styles.xpRow}>
+          <View style={styles.xpTop}>
             <View>
-              <Text style={styles.xpLevel}>Nível {MOCK_STATS.level}</Text>
-              <Text style={styles.xpPoints}>{MOCK_STATS.xp} / {MOCK_STATS.xpToNext} XP</Text>
+              <Text style={styles.xpLevel}>Nível {MOCK.level}</Text>
+              <Text style={styles.xpSub}>{MOCK.xp.toLocaleString('pt-PT')} / {MOCK.xpGoal.toLocaleString('pt-PT')} XP</Text>
             </View>
             <View style={styles.xpBadge}>
-              <Text style={styles.xpBadgeText}>🏆</Text>
+              <Text style={styles.xpBadgeEmoji}>🏆</Text>
             </View>
           </View>
-          <View style={styles.xpBarBg}>
-            <View style={[styles.xpBarFill, { width: `${Math.round(xpProgress * 100)}%` }]} />
+          <View style={styles.xpTrack}>
+            <View style={[styles.xpFill, { width: `${Math.round(xpPct * 100)}%` as any }]} />
           </View>
-          <Text style={styles.xpHint}>{MOCK_STATS.xpToNext - MOCK_STATS.xp} XP para o próximo nível</Text>
+          <Text style={styles.xpHint}>{(MOCK.xpGoal - MOCK.xp).toLocaleString('pt-PT')} XP para subir de nível</Text>
         </View>
 
-        {/* Today stats */}
-        <Text style={styles.sectionTitle}>📊 Hoje</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>👟</Text>
-            <Text style={styles.statValue}>{MOCK_STATS.steps.toLocaleString('pt-PT')}</Text>
-            <Text style={styles.statLabel}>Passos</Text>
+        {/* ── Streak ── */}
+        <View style={styles.streakCard}>
+          <Text style={styles.streakFire}>🔥</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.streakTitle}>{MOCK.streak} dias de série!</Text>
+            <Text style={styles.streakSub}>Mais {7 - MOCK.streak} dias para o bónus de XP semanal</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>📍</Text>
-            <Text style={styles.statValue}>{MOCK_STATS.distance} km</Text>
-            <Text style={styles.statLabel}>Distância</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>🔥</Text>
-            <Text style={styles.statValue}>{MOCK_STATS.calories}</Text>
-            <Text style={styles.statLabel}>kcal</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>⭐</Text>
-            <Text style={[styles.statValue, { color: Colors.xpGold }]}>+45</Text>
-            <Text style={styles.statLabel}>XP hoje</Text>
+          <View style={styles.streakDots}>
+            {Array.from({ length: 7 }, (_, i) => (
+              <View key={i} style={[styles.streakDot, i < MOCK.streak && styles.streakDotOn]} />
+            ))}
           </View>
         </View>
 
-        {/* Next session */}
+        {/* ── Next session ── */}
         {nextSession && (
           <>
-            <Text style={styles.sectionTitle}>⚡ Próxima sessão</Text>
+            <SectionHeader title="⚡ Próxima sessão" />
             <TouchableOpacity
               style={styles.sessionCard}
               onPress={() => router.push(`/(app)/session/${nextSession.id}` as any)}
               activeOpacity={0.85}
             >
-              <View style={styles.sessionEmojiBg}>
-                <Text style={styles.sessionEmoji}>
-                  {CATEGORY_EMOJI[nextSession.category] ?? CATEGORY_EMOJI.default}
-                </Text>
+              <View style={styles.sessionLeft}>
+                <Text style={styles.sessionEmoji}>{CATEGORY_EMOJI[nextSession.category] ?? CATEGORY_EMOJI.default}</Text>
               </View>
-              <View style={styles.sessionInfo}>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.sessionTitle} numberOfLines={1}>{nextSession.title}</Text>
-                <Text style={styles.sessionMeta}>🕐 {sessionLabel}</Text>
+                <Text style={styles.sessionMeta}>🕐 {timeLabel}</Text>
                 <Text style={styles.sessionMeta}>📍 {nextSession.location_name}</Text>
                 <Text style={styles.sessionMeta}>👤 {nextSession.trainer_name}</Text>
               </View>
-              <View style={styles.sessionArrow}>
-                <Text style={styles.sessionArrowText}>›</Text>
+              <View style={styles.sessionChevron}>
+                <Text style={styles.sessionChevronText}>›</Text>
               </View>
             </TouchableOpacity>
           </>
         )}
 
-        {/* Quick actions */}
-        <Text style={styles.sectionTitle}>🚀 Ações rápidas</Text>
+        {/* ── Quick actions ── */}
+        <SectionHeader title="🚀 Acesso rápido" />
         <View style={styles.quickGrid}>
-          {QUICK_ACTIONS.map(action => (
+          {QUICK.map(q => (
             <TouchableOpacity
-              key={action.label}
+              key={q.label}
               style={styles.quickCard}
-              onPress={() => router.push(action.route as any)}
+              onPress={() => router.push(q.route as any)}
               activeOpacity={0.75}
             >
-              <Text style={styles.quickEmoji}>{action.emoji}</Text>
-              <Text style={styles.quickLabel}>{action.label}</Text>
+              <Text style={styles.quickEmoji}>{q.emoji}</Text>
+              <Text style={styles.quickLabel}>{q.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Streak */}
-        <View style={styles.streakCard}>
-          <Text style={styles.streakEmoji}>🔥</Text>
-          <View style={styles.streakInfo}>
-            <Text style={styles.streakTitle}>5 dias seguidos!</Text>
-            <Text style={styles.streakSub}>Mantém o ritmo — mais 2 dias para bónus XP</Text>
-          </View>
-        </View>
-
-        <View style={styles.mockBanner}>
-          <Text style={styles.mockBannerText}>🔧 Dados simulados — liga um dispositivo para métricas reais</Text>
-        </View>
-
-        <View style={{ height: 32 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── Sub-components ────────────────────────────────────────────────────────
+function SectionHeader({ title }: { title: string }) {
+  return <Text style={styles.sectionTitle}>{title}</Text>;
+}
+
+function RingRow({ label, val, goal, unit, color }: { label: string; val: number; goal: number; unit: string; color: string }) {
+  return (
+    <View style={styles.ringRow}>
+      <View style={[styles.ringDot, { backgroundColor: color }]} />
+      <View>
+        <Text style={styles.ringRowLabel}>{label}</Text>
+        <Text style={[styles.ringRowVal, { color }]}>{val}<Text style={styles.ringRowGoal}>/{goal} {unit}</Text></Text>
+      </View>
+    </View>
+  );
+}
+
+function StatChip({ emoji, val, label }: { emoji: string; val: string; label: string }) {
+  return (
+    <View style={styles.statChip}>
+      <Text style={styles.statEmoji}>{emoji}</Text>
+      <Text style={styles.statVal}>{val}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Styles ────────────────────────────────────────────────────────────────
+const CARD_RADIUS = 22;
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { padding: 20 },
+  container: { flex: 1, backgroundColor: '#0A0F1E' },
+  scroll: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 32 },
+
+  // header
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  greeting: { fontSize: 22, fontFamily: FontFamily.bold, color: Colors.text },
-  date: { fontSize: 13, fontFamily: FontFamily.regular, color: Colors.textMuted, marginTop: 2, textTransform: 'capitalize' },
-  avatarBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.border },
-  avatarEmoji: { fontSize: 22 },
+  greeting: { fontSize: 13, fontFamily: FontFamily.medium, color: 'rgba(255,255,255,0.5)', textTransform: 'capitalize' },
+  name: { fontSize: 24, fontFamily: FontFamily.bold, color: '#FFFFFF', marginTop: 2 },
+  avatarBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  avatarLetter: { fontSize: 18, fontFamily: FontFamily.bold, color: '#fff' },
 
-  xpCard: { backgroundColor: Colors.primary, borderRadius: 20, padding: 18, marginBottom: 24 },
-  xpRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  xpLevel: { fontSize: 18, fontFamily: FontFamily.bold, color: '#fff' },
-  xpPoints: { fontSize: 13, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
-  xpBadge: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  xpBadgeText: { fontSize: 22 },
-  xpBarBg: { height: 8, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 4, marginBottom: 6 },
-  xpBarFill: { height: 8, backgroundColor: '#fff', borderRadius: 4 },
-  xpHint: { fontSize: 12, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.7)' },
+  // rings hero
+  ringsCard: {
+    backgroundColor: '#141928',
+    borderRadius: CARD_RADIUS,
+    padding: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+  },
+  ringsRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  ringsLegend: { flex: 1, gap: 14 },
+  ringRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ringDot: { width: 10, height: 10, borderRadius: 5 },
+  ringRowLabel: { fontSize: 11, fontFamily: FontFamily.medium, color: 'rgba(255,255,255,0.45)' },
+  ringRowVal: { fontSize: 17, fontFamily: FontFamily.bold },
+  ringRowGoal: { fontSize: 12, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.35)' },
+  ringsMock: { marginTop: 14, fontSize: 10, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.25)', textAlign: 'center' },
 
-  sectionTitle: { fontSize: 16, fontFamily: FontFamily.bold, color: Colors.text, marginBottom: 12 },
+  // stats
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  statChip: { flex: 1, backgroundColor: '#141928', borderRadius: 18, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
+  statEmoji: { fontSize: 22, marginBottom: 4 },
+  statVal: { fontSize: 15, fontFamily: FontFamily.bold, color: '#FFFFFF' },
+  statLabel: { fontSize: 10, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
 
-  statsGrid: { flexDirection: 'row', gap: 10, marginBottom: 24, flexWrap: 'wrap' },
-  statCard: { flex: 1, minWidth: '22%', backgroundColor: Colors.surface, borderRadius: 16, padding: 14, alignItems: 'center', elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  statEmoji: { fontSize: 24, marginBottom: 6 },
-  statValue: { fontSize: 16, fontFamily: FontFamily.bold, color: Colors.text },
-  statLabel: { fontSize: 10, fontFamily: FontFamily.regular, color: Colors.textMuted, marginTop: 2, textAlign: 'center' },
+  // xp
+  xpCard: {
+    backgroundColor: '#1B2547',
+    borderRadius: CARD_RADIUS,
+    padding: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(27,111,235,0.3)',
+  },
+  xpTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  xpLevel: { fontSize: 18, fontFamily: FontFamily.bold, color: '#FFFFFF' },
+  xpSub: { fontSize: 12, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
+  xpBadge: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+  xpBadgeEmoji: { fontSize: 20 },
+  xpTrack: { height: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4 },
+  xpFill: { height: 8, backgroundColor: Colors.primary, borderRadius: 4 },
+  xpHint: { fontSize: 11, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.35)', marginTop: 8 },
 
-  sessionCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 18, padding: 14, marginBottom: 24, gap: 14, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, borderWidth: 1.5, borderColor: Colors.primary + '25' },
-  sessionEmojiBg: { width: 52, height: 52, borderRadius: 14, backgroundColor: Colors.primaryAlpha10, alignItems: 'center', justifyContent: 'center' },
+  // streak
+  streakCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#1E1208',
+    borderRadius: CARD_RADIUS,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(251,146,60,0.25)',
+  },
+  streakFire: { fontSize: 32 },
+  streakTitle: { fontSize: 15, fontFamily: FontFamily.bold, color: '#FB923C' },
+  streakSub: { fontSize: 11, fontFamily: FontFamily.regular, color: 'rgba(251,146,60,0.6)', marginTop: 2 },
+  streakDots: { flexDirection: 'column', gap: 4, alignItems: 'center' },
+  streakDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)' },
+  streakDotOn: { backgroundColor: '#FB923C' },
+
+  // section title
+  sectionTitle: { fontSize: 15, fontFamily: FontFamily.bold, color: '#FFFFFF', marginBottom: 10 },
+
+  // next session
+  sessionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#141928',
+    borderRadius: CARD_RADIUS,
+    padding: 16,
+    marginBottom: 20,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(27,111,235,0.25)',
+  },
+  sessionLeft: {
+    width: 52, height: 52, borderRadius: 16,
+    backgroundColor: 'rgba(27,111,235,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   sessionEmoji: { fontSize: 28 },
-  sessionInfo: { flex: 1, gap: 3 },
-  sessionTitle: { fontSize: 15, fontFamily: FontFamily.bold, color: Colors.text },
-  sessionMeta: { fontSize: 12, fontFamily: FontFamily.regular, color: Colors.textMuted },
-  sessionArrow: { width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.primaryAlpha10, alignItems: 'center', justifyContent: 'center' },
-  sessionArrowText: { fontSize: 20, color: Colors.primary, lineHeight: 26 },
+  sessionTitle: { fontSize: 15, fontFamily: FontFamily.bold, color: '#FFFFFF', marginBottom: 4 },
+  sessionMeta: { fontSize: 12, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.45)', marginTop: 2 },
+  sessionChevron: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sessionChevronText: { fontSize: 20, color: 'rgba(255,255,255,0.5)', lineHeight: 26 },
 
-  quickGrid: { flexDirection: 'row', gap: 10, marginBottom: 24, flexWrap: 'wrap' },
-  quickCard: { flex: 1, minWidth: '22%', backgroundColor: Colors.surface, borderRadius: 16, padding: 14, alignItems: 'center', gap: 6, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  quickEmoji: { fontSize: 26 },
-  quickLabel: { fontSize: 11, fontFamily: FontFamily.medium, color: Colors.text, textAlign: 'center' },
-
-  streakCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FFF7ED', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#FED7AA' },
-  streakEmoji: { fontSize: 32 },
-  streakInfo: { flex: 1 },
-  streakTitle: { fontSize: 15, fontFamily: FontFamily.bold, color: '#C2410C' },
-  streakSub: { fontSize: 12, fontFamily: FontFamily.regular, color: '#EA580C', marginTop: 2 },
-
-  mockBanner: { backgroundColor: '#F1F5F9', borderRadius: 10, padding: 10, alignItems: 'center' },
-  mockBannerText: { fontSize: 11, fontFamily: FontFamily.regular, color: Colors.textMuted, textAlign: 'center' },
+  // quick actions
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  quickCard: {
+    width: (SCREEN_W - 36 - 10) / 2,
+    backgroundColor: '#141928',
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+  },
+  quickEmoji: { fontSize: 28 },
+  quickLabel: { fontSize: 13, fontFamily: FontFamily.semibold, color: '#FFFFFF' },
 });
