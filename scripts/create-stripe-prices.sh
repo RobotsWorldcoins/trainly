@@ -20,8 +20,17 @@ set -euo pipefail
 
 # ─── FILL THESE IN ─────────────────────────────────────────
 STRIPE_SECRET_KEY="sk_live_REPLACE_WITH_YOUR_STRIPE_SECRET_KEY"
-SUPABASE_ACCESS_TOKEN="sbp_c32af6072f5a375170e4bde6b1f6cf7420f988d7"
+SUPABASE_ACCESS_TOKEN="REPLACE_WITH_NEW_SUPABASE_PAT"
 SUPABASE_PROJECT_REF="mrxnwdvsfalwlpbhmsap"
+
+# ── Prices already created 2026-04-25 ─────────────────────────
+# If re-running, set these directly and skip the price creation block
+EXISTING_STRIPE_PRICE_USER_PLUS_MONTHLY="price_1TQ8Re7RLKcygREl0Ys3fuvA"
+EXISTING_STRIPE_PRICE_USER_PLUS_ANNUAL="price_1TQ8Rw7RLKcygRElEaLFYMx3"
+EXISTING_STRIPE_PRICE_TRAINER_MONTHLY="price_1TQ8Rx7RLKcygRElLRhMbAqL"
+EXISTING_STRIPE_PRICE_TRAINER_ANNUAL="price_1TQ8Rx7RLKcygRElumL973ci"
+EXISTING_STRIPE_PRICE_COACH_PRO_MONTHLY="price_1TQ8Ry7RLKcygRElz1JE1fK0"
+EXISTING_STRIPE_PRICE_COACH_PRO_ANNUAL="price_1TQ8Rz7RLKcygRElVHRpZHiy"
 # ───────────────────────────────────────────────────────────
 
 if [[ "$STRIPE_SECRET_KEY" == sk_live_REPLACE* ]]; then
