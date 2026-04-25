@@ -20,7 +20,7 @@ set -euo pipefail
 
 # ─── FILL THESE IN ─────────────────────────────────────────
 STRIPE_SECRET_KEY="sk_live_REPLACE_WITH_YOUR_STRIPE_SECRET_KEY"
-SUPABASE_ACCESS_TOKEN="REPLACE_WITH_NEW_SUPABASE_PAT"
+SUPABASE_ACCESS_TOKEN="sbp_c32af6072f5a375170e4bde6b1f6cf7420f988d7"
 SUPABASE_PROJECT_REF="mrxnwdvsfalwlpbhmsap"
 # ───────────────────────────────────────────────────────────
 
