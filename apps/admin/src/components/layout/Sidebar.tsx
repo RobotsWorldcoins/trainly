@@ -29,7 +29,7 @@ export function Sidebar() {
             <span className="text-white font-extrabold text-sm">T</span>
           </div>
           <div>
-            <span className="text-white font-extrabold text-lg">Trainly</span>
+            <span className="text-white font-extrabold text-lg">TrainyX</span>
             <span className="block text-white/50 text-xs">Admin Dashboard</span>
           </div>
         </div>
@@ -58,7 +58,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-white/10">
-        <span className="text-white/30 text-xs">v1.0.0 · Trainly Admin</span>
+        <span className="text-white/30 text-xs">v1.0.0 · TrainyX Admin</span>
       </div>
     </aside>
   );

@@ -1,10 +1,10 @@
 // ─────────────────────────────────────────────
-// Trainly — English (EN) Translations
+// TrainyX — English (EN) Translations
 // ─────────────────────────────────────────────
 
 export const en = {
   common: {
-    app_name: 'Trainly',
+    app_name: 'TrainyX',
     loading: 'Loading...',
     error: 'Error',
     retry: 'Try again',
@@ -52,7 +52,7 @@ export const en = {
     and: 'and',
     create_account: 'Create account',
     welcome_back: 'Welcome back',
-    sign_in_subtitle: 'Sign in to your Trainly account',
+    sign_in_subtitle: 'Sign in to your TrainyX account',
   },
   onboarding: {
     choose_path: 'How do you want to start?',
@@ -204,7 +204,7 @@ export const en = {
     verification_rejected: 'Application Rejected',
     apply_now: 'Apply Now',
     application_title: 'Trainer Application',
-    application_desc: 'Fill in your details to become a verified Trainly trainer.',
+    application_desc: 'Fill in your details to become a verified TrainyX trainer.',
     personal_info: 'Personal Information',
     professional_info: 'Professional Information',
     documents: 'Documents',

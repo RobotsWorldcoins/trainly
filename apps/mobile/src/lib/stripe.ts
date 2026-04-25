@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// Trainly — Stripe helpers for React Native
+// TrainyX — Stripe helpers for React Native
 // ─────────────────────────────────────────────
 
 import { useStripe } from '@stripe/stripe-react-native';

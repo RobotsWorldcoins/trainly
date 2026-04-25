@@ -1,10 +1,10 @@
 // ─────────────────────────────────────────────
-// Trainly — Auth Store
+// TrainyX — Auth Store
 // ─────────────────────────────────────────────
 
 import { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
-import { UserRole } from '@trainly/shared';
+import { UserRole } from '@trainyx/shared';
 import { supabase } from '@lib/supabase';
 
 interface Profile {

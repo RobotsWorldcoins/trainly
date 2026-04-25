@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npx --yes pnpm@9 --filter @trainly/admin build",
+  "buildCommand": "npx --yes pnpm@9 --filter @trainyx/admin build",
   "outputDirectory": "apps/admin/.next",
   "installCommand": "npx --yes pnpm@9 install",
   "regions": ["cdg1"]

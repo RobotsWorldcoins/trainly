@@ -11,7 +11,7 @@ import { Colors } from '@constants/colors';
 import { FontFamily, FontSize, Spacing, BorderRadius, Shadow } from '@constants/typography';
 import { supabase, uploadFile } from '@lib/supabase';
 import { useAuthStore } from '@stores/auth.store';
-import { SESSION_CATEGORIES } from '@trainly/shared';
+import { SESSION_CATEGORIES } from '@trainyx/shared';
 
 type Step = 'personal' | 'professional' | 'documents' | 'declarations';
 
@@ -330,8 +330,8 @@ export default function TrainerApplyScreen() {
             <Text style={styles.stepTitle}>{t('trainer.declarations')}</Text>
 
             {[
-              { key: 'accepts_trainer_terms', label: 'Aceito os Termos e Condições do Treinador Trainly' },
-              { key: 'accepts_safety_rules', label: 'Aceito as Regras de Segurança e Conduta da Trainly' },
+              { key: 'accepts_trainer_terms', label: 'Aceito os Termos e Condições do Treinador TrainyX' },
+              { key: 'accepts_safety_rules', label: 'Aceito as Regras de Segurança e Conduta da TrainyX' },
               { key: 'declares_autonomous', label: 'Declaro que sou trabalhador independente/autónomo' },
               { key: 'declares_fit_to_train', label: 'Declaro que estou física e mentalmente apto para conduzir sessões de treino' },
             ].map(decl => (

@@ -10,7 +10,7 @@ import { Colors } from '@constants/colors';
 import { FontFamily, FontSize, Spacing, BorderRadius, Shadow } from '@constants/typography';
 import { useAuthStore } from '@stores/auth.store';
 import { supabase } from '@lib/supabase';
-import { LEVEL_THRESHOLDS, BODY_AREAS } from '@trainly/shared';
+import { LEVEL_THRESHOLDS, BODY_AREAS } from '@trainyx/shared';
 import { BodyProgressAvatar } from '@components/progress/BodyProgressAvatar';
 import { XPBar } from '@components/progress/XPBar';
 

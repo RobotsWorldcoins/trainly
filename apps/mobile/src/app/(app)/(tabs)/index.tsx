@@ -12,7 +12,7 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, CategoryColors } from '@constants/colors';
 import { FontFamily, FontSize, Spacing, BorderRadius, Shadow } from '@constants/typography';
-import { LISBON_COORDS, DEFAULT_RADIUS_KM } from '@trainly/shared';
+import { LISBON_COORDS, DEFAULT_RADIUS_KM } from '@trainyx/shared';
 import { useMapStore } from '@stores/map.store';
 import { supabase } from '@lib/supabase';
 import { SessionCard } from '@components/sessions/SessionCard';

@@ -2,9 +2,8 @@ import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useTranslation } from 'react-i18next';
 import { Colors } from '@constants/colors';
-import { FontFamily, FontSize } from '@constants/typography';
+import { FontFamily } from '@constants/typography';
 import { useAuthStore } from '@stores/auth.store';
 
 function TabIcon({ name, emoji, focused }: { name: string; emoji: string; focused: boolean }) {
@@ -18,10 +17,7 @@ function TabIcon({ name, emoji, focused }: { name: string; emoji: string; focuse
 
 function CreateTabButton({ children, onPress }: any) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={styles.createButton}
-    >
+    <Pressable onPress={onPress} style={styles.createButton}>
       <View style={styles.createButtonInner}>
         <Text style={styles.createButtonIcon}>+</Text>
       </View>
@@ -30,7 +26,6 @@ function CreateTabButton({ children, onPress }: any) {
 }
 
 export default function TabsLayout() {
-  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { isTrainer } = useAuthStore();
 
@@ -58,51 +53,64 @@ export default function TabsLayout() {
         tabBarShowLabel: false,
       }}
     >
+      {/* Map / Explore */}
       <Tabs.Screen
         name="index"
         options={{
-          title: t('map.title'),
+          title: 'Mapa',
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={t('map.title')} emoji="🗺️" focused={focused} />
+            <TabIcon name="Mapa" emoji="🗺️" focused={focused} />
           ),
         }}
       />
+
+      {/* Agenda / Calendar */}
       <Tabs.Screen
-        name="sessions"
+        name="agenda"
         options={{
-          title: t('sessions.title'),
+          title: 'Agenda',
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={t('sessions.title')} emoji="📅" focused={focused} />
+            <TabIcon name="Agenda" emoji="📅" focused={focused} />
           ),
         }}
       />
+
+      {/* Create (centre FAB) */}
       <Tabs.Screen
         name="create"
         options={{
-          title: t('create.title'),
+          title: 'Criar',
           tabBarButton: (props) => (
             <CreateTabButton {...props} onPress={handleCreatePress} />
           ),
         }}
       />
+
+      {/* Feed / Timeline */}
       <Tabs.Screen
-        name="progress"
+        name="feed"
         options={{
-          title: t('progress.title'),
+          title: 'Feed',
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={t('progress.title')} emoji="📈" focused={focused} />
+            <TabIcon name="Feed" emoji="📡" focused={focused} />
           ),
         }}
       />
+
+      {/* Profile */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: t('profile.title'),
+          title: 'Perfil',
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={t('profile.title')} emoji="👤" focused={focused} />
+            <TabIcon name="Perfil" emoji="👤" focused={focused} />
           ),
         }}
       />
+
+      {/* Hidden tabs — still navigable by URL */}
+      <Tabs.Screen name="sessions" options={{ href: null }} />
+      <Tabs.Screen name="progress" options={{ href: null }} />
     </Tabs>
   );
 }
@@ -115,17 +123,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   tabIconFocused: {},
-  tabEmoji: {
-    fontSize: 20,
-  },
+  tabEmoji: { fontSize: 20 },
   tabLabel: {
     fontSize: 10,
     fontFamily: FontFamily.medium,
     color: Colors.textMuted,
   },
-  tabLabelFocused: {
-    color: Colors.primary,
-  },
+  tabLabelFocused: { color: Colors.primary },
   createButton: {
     flex: 1,
     alignItems: 'center',
@@ -147,7 +151,7 @@ const styles = StyleSheet.create({
   },
   createButtonIcon: {
     fontSize: 28,
-    color: Colors.textInverse,
+    color: '#FFFFFF',
     lineHeight: 32,
     fontFamily: FontFamily.regular,
   },

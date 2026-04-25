@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '@constants/colors';
 import { FontFamily, FontSize, Spacing, BorderRadius } from '@constants/typography';
-import { UserRole } from '@trainly/shared';
+import { UserRole } from '@trainyx/shared';
 
 interface RoleBadgeProps {
   role: UserRole;

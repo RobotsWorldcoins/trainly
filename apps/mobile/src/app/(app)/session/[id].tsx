@@ -13,7 +13,7 @@ import { Colors, CategoryColors, IntensityColors } from '@constants/colors';
 import { FontFamily, FontSize, Spacing, BorderRadius, Shadow } from '@constants/typography';
 import { supabase } from '@lib/supabase';
 import { useAuthStore } from '@stores/auth.store';
-import { BODY_AREAS } from '@trainly/shared';
+import { BODY_AREAS } from '@trainyx/shared';
 
 async function fetchSession(id: string) {
   const { data, error } = await supabase

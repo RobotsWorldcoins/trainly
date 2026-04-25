@@ -87,7 +87,7 @@ export default function TrainerEarningsScreen() {
         <View style={styles.commissionCard}>
           <Text style={styles.commissionTitle}>ℹ️ Comissão da plataforma</Text>
           <Text style={styles.commissionText}>
-            Trainly retém 10% de cada reserva (5% nos primeiros 90 dias após registo).
+            TrainyX retém 10% de cada reserva (5% nos primeiros 90 dias após registo).
             Os valores mostrados já descontam a comissão.
           </Text>
         </View>

@@ -1,12 +1,12 @@
 // ─────────────────────────────────────────────
-// Trainly — Portuguese (PT) Translations
+// TrainyX — Portuguese (PT) Translations
 // Default language
 // ─────────────────────────────────────────────
 
 export const pt = {
   // ── Common ───────────────────────────────────
   common: {
-    app_name: 'Trainly',
+    app_name: 'TrainyX',
     loading: 'A carregar...',
     error: 'Erro',
     retry: 'Tentar novamente',
@@ -56,7 +56,7 @@ export const pt = {
     and: 'e',
     create_account: 'Criar conta',
     welcome_back: 'Bem-vindo de volta',
-    sign_in_subtitle: 'Entra na tua conta Trainly',
+    sign_in_subtitle: 'Entra na tua conta TrainyX',
   },
 
   // ── Onboarding ───────────────────────────────
@@ -222,7 +222,7 @@ export const pt = {
     verification_rejected: 'Candidatura Rejeitada',
     apply_now: 'Candidatar-me',
     application_title: 'Candidatura de Treinador',
-    application_desc: 'Preenche os teus dados para te tornares um treinador verificado Trainly.',
+    application_desc: 'Preenche os teus dados para te tornares um treinador verificado TrainyX.',
     personal_info: 'Informação Pessoal',
     professional_info: 'Informação Profissional',
     documents: 'Documentos',

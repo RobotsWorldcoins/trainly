@@ -63,7 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_reviews_session_id ON reviews(session_id);
 CREATE INDEX IF NOT EXISTS idx_xp_logs_user_id ON xp_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);
 CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
-CREATE INDEX IF NOT EXISTS idx_refunds_session_id ON refunds(session_id);
+CREATE INDEX IF NOT EXISTS idx_refunds_payment_id ON refunds(payment_id);
 CREATE INDEX IF NOT EXISTS idx_refunds_user_id ON refunds(user_id);
 
 -- RLS for new tables

@@ -66,7 +66,7 @@ export default function SignupScreen() {
 
           <View style={styles.header}>
             <Text style={styles.title}>{t('auth.create_account')}</Text>
-            <Text style={styles.subtitle}>Junta-te à comunidade Trainly</Text>
+            <Text style={styles.subtitle}>Junta-te à comunidade TrainyX</Text>
           </View>
 
           {/* Path choice */}

@@ -6,18 +6,18 @@ import { useAuthStore } from '@stores/auth.store';
 import { supabase } from '@lib/supabase';
 import { Colors } from '@constants/colors';
 import { FontFamily, FontSize, Spacing, BorderRadius } from '@constants/typography';
-import { UserRole } from '@trainly/shared';
+import { UserRole } from '@trainyx/shared';
 
 const DEV_ACCOUNTS = [
-  { role: 'user_free' as UserRole, email: 'dev.free@trainly.app', label: '👤 User Free', color: '#6B7A99' },
-  { role: 'user_plus' as UserRole, email: 'dev.plus@trainly.app', label: '⭐ User Plus', color: '#F5A623' },
-  { role: 'trainer_pending' as UserRole, email: 'dev.pending@trainly.app', label: '⏳ Trainer Pending', color: '#F59E0B' },
-  { role: 'trainer' as UserRole, email: 'dev.trainer@trainly.app', label: '✅ Trainer', color: '#1B6FEB' },
-  { role: 'coach_pro' as UserRole, email: 'dev.coach@trainly.app', label: '🏆 Coach Pro', color: '#7C3AED' },
-  { role: 'admin' as UserRole, email: 'dev.admin@trainly.app', label: '🛡️ Admin', color: '#EF4444' },
+  { role: 'user_free' as UserRole, email: 'dev.free@trainyx.app', label: '👤 User Free', color: '#6B7A99' },
+  { role: 'user_plus' as UserRole, email: 'dev.plus@trainyx.app', label: '⭐ User Plus', color: '#F5A623' },
+  { role: 'trainer_pending' as UserRole, email: 'dev.pending@trainyx.app', label: '⏳ Trainer Pending', color: '#F59E0B' },
+  { role: 'trainer' as UserRole, email: 'dev.trainer@trainyx.app', label: '✅ Trainer', color: '#1B6FEB' },
+  { role: 'coach_pro' as UserRole, email: 'dev.coach@trainyx.app', label: '🏆 Coach Pro', color: '#7C3AED' },
+  { role: 'admin' as UserRole, email: 'dev.admin@trainyx.app', label: '🛡️ Admin', color: '#EF4444' },
 ] as const;
 
-const DEV_PASSWORD = 'Trainly2024!';
+const DEV_PASSWORD = 'TrainyX2024!';
 
 export function DevToolsOverlay() {
   const [expanded, setExpanded] = useState(false);

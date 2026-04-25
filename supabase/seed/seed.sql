@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Trainly — Seed Data
+-- TrainyX — Seed Data
 -- Realistic test data for Lisbon-based MVP testing
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ INSERT INTO badges (name, name_en, description, description_en, icon, category, 
 ('Líder Social', 'Social Leader', 'Cria o teu primeiro grupo social', 'Create your first social group', '👥', 'social', '{"groups_created": 1}'),
 ('Revisor', 'Reviewer', 'Escreve a tua primeira avaliação', 'Write your first review', '⭐', 'engagement', '{"reviews_written": 1}'),
 ('Madrugador', 'Early Bird', 'Participa em sessão antes das 8h', 'Attend a session before 8am', '🌅', 'special', '{"morning_sessions": 1}'),
-('Treinador Verificado', 'Verified Trainer', 'Treinador verificado pela Trainly', 'Verified trainer by Trainly', '✅', 'trainer', '{"trainer_verified": true}'),
+('Treinador Verificado', 'Verified Trainer', 'Treinador verificado pela TrainyX', 'Verified trainer by TrainyX', '✅', 'trainer', '{"trainer_verified": true}'),
 ('Consistente', 'Consistent', 'Conduz sessões durante 4 semanas consecutivas', 'Led sessions for 4 consecutive weeks', '📅', 'trainer', '{"consecutive_weeks": 4}'),
 ('Top Avaliado', 'Top Rated', 'Média de 4.8+ com 10+ avaliações', 'Average 4.8+ with 10+ reviews', '🌟', 'trainer', '{"avg_rating": 4.8, "min_reviews": 10}'),
 ('Senior Friendly', 'Senior Friendly', 'Especializado em treinos para seniores', 'Specialized in senior-friendly training', '💙', 'specialty', '{"is_senior_friendly": true}');
@@ -42,11 +42,11 @@ INSERT INTO curated_locations (name, name_en, description, description_en, type,
 -- ─────────────────────────────────────────────
 -- DEV/TEST AUTH USERS
 -- These are created via Supabase Auth API in seed script
--- Passwords all: Trainly2024!
+-- Passwords all: TrainyX2024!
 -- ─────────────────────────────────────────────
 
 -- Note: In local dev, create these users via:
--- supabase auth admin create-user --email dev.user@trainly.app --password Trainly2024!
+-- supabase auth admin create-user --email dev.user@trainyx.app --password TrainyX2024!
 -- OR use the dev bypass mode in the mobile app
 
 -- We seed the profile records referencing known UUIDs for dev

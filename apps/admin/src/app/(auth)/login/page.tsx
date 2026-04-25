@@ -54,7 +54,7 @@ export default function LoginPage() {
             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-2xl font-bold">T</span>
             </div>
-            <h1 className="text-2xl font-extrabold text-gray-900">Trainly Admin</h1>
+            <h1 className="text-2xl font-extrabold text-gray-900">TrainyX Admin</h1>
             <p className="text-gray-500 mt-1">Acesso restrito a administradores</p>
           </div>
 
@@ -66,7 +66,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="admin@trainly.app"
+                placeholder="admin@trainyx.app"
                 required
               />
             </div>

@@ -1,5 +1,5 @@
 # A string used to distinguish different Supabase projects on the same host.
-project_id = "trainly"
+project_id = "trainyx"
 
 [api]
 enabled = true
@@ -11,7 +11,7 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+major_version = 17
 
 [studio]
 enabled = true
@@ -28,9 +28,8 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-port = 54325
 site_url = "http://localhost:8081"
-additional_redirect_urls = ["trainly://"]
+additional_redirect_urls = ["trainyx://"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

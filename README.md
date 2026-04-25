@@ -1,4 +1,4 @@
-# Trainly — Outdoor Fitness Discovery & Booking Platform
+# TrainyX — Outdoor Fitness Discovery & Booking Platform
 
 > Mobile-first outdoor fitness session discovery and booking for Lisbon.
 
@@ -7,7 +7,7 @@
 ## Project Structure
 
 ```
-trainly/
+trainyx/
 ├── apps/
 │   ├── mobile/          # React Native + Expo (iOS + Android)
 │   └── admin/           # Next.js admin dashboard
@@ -36,7 +36,7 @@ trainly/
 
 ```bash
 git clone <your-repo>
-cd trainly
+cd trainyx
 pnpm install
 ```
 
@@ -94,16 +94,16 @@ Tap it to:
 
 | Role | Email | Password |
 |------|-------|----------|
-| User Free | `dev.free@trainly.app` | `Trainly2024!` |
-| User Plus | `dev.plus@trainly.app` | `Trainly2024!` |
-| Trainer Pending | `dev.pending@trainly.app` | `Trainly2024!` |
-| Trainer | `dev.trainer@trainly.app` | `Trainly2024!` |
-| Coach Pro | `dev.coach@trainly.app` | `Trainly2024!` |
-| Admin | `dev.admin@trainly.app` | `Trainly2024!` |
+| User Free | `dev.free@trainyx.app` | `TrainyX2024!` |
+| User Plus | `dev.plus@trainyx.app` | `TrainyX2024!` |
+| Trainer Pending | `dev.pending@trainyx.app` | `TrainyX2024!` |
+| Trainer | `dev.trainer@trainyx.app` | `TrainyX2024!` |
+| Coach Pro | `dev.coach@trainyx.app` | `TrainyX2024!` |
+| Admin | `dev.admin@trainyx.app` | `TrainyX2024!` |
 
 Create these via Supabase Dashboard → Authentication → Users, or with:
 ```bash
-supabase auth admin create-user --email dev.trainer@trainly.app --password Trainly2024!
+supabase auth admin create-user --email dev.trainer@trainyx.app --password TrainyX2024!
 ```
 
 ### Seed dev sessions
@@ -263,7 +263,7 @@ supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
 
 ## Logo
 
-Place your Trainly logo at:
+Place your TrainyX logo at:
 - `apps/mobile/assets/images/logo.png` (used in welcome screen)
 - `apps/mobile/assets/images/icon.png` (app icon)
 - `apps/mobile/assets/images/splash.png` (splash screen)

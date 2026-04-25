@@ -117,7 +117,7 @@ export default function StripeOnboardScreen() {
         </Pressable>
 
         <Text style={styles.disclaimer}>
-          Processado por Stripe. Os teus dados financeiros nunca passam pelos servidores da Trainly.
+          Processado por Stripe. Os teus dados financeiros nunca passam pelos servidores da TrainyX.
         </Text>
       </View>
     </SafeAreaView>

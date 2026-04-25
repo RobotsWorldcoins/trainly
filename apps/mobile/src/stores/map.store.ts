@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────
 
 import { create } from 'zustand';
-import { MapFilters, SessionCategory, SessionType } from '@trainly/shared';
+import { MapFilters, SessionCategory, SessionType } from '@trainyx/shared';
 
 interface MapState {
   userLocation: { latitude: number; longitude: number } | null;

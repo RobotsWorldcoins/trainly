@@ -1,40 +1,39 @@
 {
   "expo": {
-    "name": "Trainly",
-    "slug": "trainly",
+    "name": "TrainyX",
+    "slug": "trainyx",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "trainly",
+    "scheme": "trainyx",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1B2A4A"
+      "backgroundColor": "#0F172A"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.trainly.mobile",
+      "bundleIdentifier": "com.trainyx.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "A Trainly usa a tua localização para mostrar sessões perto de ti e para validar a tua presença.",
-        "NSCameraUsageDescription": "A câmara é usada para fazer upload de documentos e foto de perfil.",
-        "NSPhotoLibraryUsageDescription": "A galeria é usada para selecionar a tua foto de perfil ou documentos."
+        "NSLocationWhenInUseUsageDescription": "TrainyX usa a tua localização para mostrar sessões perto de ti e validar a tua presença.",
+        "NSCameraUsageDescription": "A câmara é usada para foto de perfil e documentos.",
+        "NSPhotoLibraryUsageDescription": "A galeria é usada para selecionar foto de perfil ou documentos."
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#1B2A4A"
+        "backgroundColor": "#0F172A"
       },
-      "package": "app.trainly.mobile",
+      "package": "com.trainyx.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
-      ],
-      "googleServicesFile": "./google-services.json"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -47,8 +46,8 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "A Trainly usa a tua localização para mostrar sessões perto de ti.",
-          "locationWhenInUsePermission": "A Trainly usa a tua localização para mostrar sessões perto de ti."
+          "locationAlwaysAndWhenInUsePermission": "TrainyX usa a tua localização para mostrar sessões perto de ti.",
+          "locationWhenInUsePermission": "TrainyX usa a tua localização para mostrar sessões perto de ti."
         }
       ],
       [
@@ -58,15 +57,9 @@
         }
       ],
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsDownloadToken": "MAPBOX_DOWNLOAD_TOKEN_PLACEHOLDER"
-        }
-      ],
-      [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.app.trainly"
+          "merchantIdentifier": "merchant.com.trainyx"
         }
       ]
     ],

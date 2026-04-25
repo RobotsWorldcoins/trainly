@@ -96,7 +96,7 @@ CREATE TYPE admin_action_type AS ENUM (
 -- ─────────────────────────────────────────────
 
 CREATE TABLE profiles (
-  id                          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                     UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   role                        user_role NOT NULL DEFAULT 'user_free',
   display_name                TEXT NOT NULL,
@@ -139,7 +139,7 @@ CREATE INDEX idx_profiles_is_featured ON profiles(is_featured);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE trainer_specialties (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   profile_id  UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   category    session_category NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -151,7 +151,7 @@ CREATE TABLE trainer_specialties (
 -- ─────────────────────────────────────────────
 
 CREATE TABLE trainer_applications (
-  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id               UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   status                trainer_application_status NOT NULL DEFAULT 'draft',
   -- Personal info
@@ -190,7 +190,7 @@ CREATE INDEX idx_trainer_applications_status ON trainer_applications(status);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE trainer_documents (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id  UUID NOT NULL REFERENCES trainer_applications(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type            trainer_document_type NOT NULL,
@@ -214,7 +214,7 @@ CREATE INDEX idx_trainer_documents_user_id ON trainer_documents(user_id);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE subscriptions (
-  id                        UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   plan                      subscription_plan NOT NULL,
   status                    subscription_status NOT NULL DEFAULT 'active',
@@ -242,7 +242,7 @@ CREATE INDEX idx_subscriptions_status ON subscriptions(status);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE curated_locations (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name            TEXT NOT NULL,
   name_en         TEXT,
   description     TEXT,
@@ -268,7 +268,7 @@ CREATE INDEX idx_curated_locations_active ON curated_locations(is_active);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE sessions (
-  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trainer_id            UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   type                  session_type NOT NULL,
   title                 TEXT NOT NULL,
@@ -323,7 +323,7 @@ CREATE INDEX idx_sessions_location ON sessions USING gist(
 -- ─────────────────────────────────────────────
 
 CREATE TABLE session_participants (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id    UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   profile_id    UUID NOT NULL REFERENCES profiles(id),
@@ -345,7 +345,7 @@ CREATE INDEX idx_session_participants_status ON session_participants(status);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE session_messages (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id  UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   sender_id   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   content     TEXT NOT NULL,
@@ -363,7 +363,7 @@ CREATE INDEX idx_session_messages_created_at ON session_messages(session_id, cre
 -- ─────────────────────────────────────────────
 
 CREATE TABLE checkins (
-  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id          UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   user_id             UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   participant_id      UUID NOT NULL REFERENCES session_participants(id),
@@ -395,7 +395,7 @@ CREATE INDEX idx_checkins_user_id ON checkins(user_id);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE payments (
-  id                          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id                  UUID NOT NULL REFERENCES sessions(id),
   participant_id              UUID NOT NULL REFERENCES session_participants(id),
   payer_id                    UUID NOT NULL REFERENCES auth.users(id),
@@ -430,7 +430,7 @@ CREATE INDEX idx_payments_status ON payments(status);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE payouts (
-  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trainer_id            UUID NOT NULL REFERENCES profiles(id),
   session_id            UUID NOT NULL REFERENCES sessions(id),
   payment_id            UUID NOT NULL REFERENCES payments(id),
@@ -453,7 +453,7 @@ CREATE INDEX idx_payouts_status ON payouts(status);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE refunds (
-  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   payment_id            UUID NOT NULL REFERENCES payments(id),
   user_id               UUID NOT NULL REFERENCES auth.users(id),
   amount_cents          INTEGER NOT NULL,
@@ -473,7 +473,7 @@ CREATE INDEX idx_refunds_user_id ON refunds(user_id);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE reviews (
-  id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id            UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   reviewer_id           UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   trainer_id            UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -512,7 +512,7 @@ CREATE TABLE trainer_review_summary (
 -- ─────────────────────────────────────────────
 
 CREATE TABLE disputes (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id      UUID NOT NULL REFERENCES sessions(id),
   raised_by       UUID NOT NULL REFERENCES auth.users(id),
   against         UUID REFERENCES auth.users(id),
@@ -535,7 +535,7 @@ CREATE INDEX idx_disputes_status ON disputes(status);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE reports (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   reporter_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   target_type     report_target_type NOT NULL,
   target_id       UUID NOT NULL,
@@ -556,7 +556,7 @@ CREATE INDEX idx_reports_status ON reports(status);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE badges (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name          TEXT NOT NULL,
   name_en       TEXT,
   description   TEXT NOT NULL,
@@ -569,7 +569,7 @@ CREATE TABLE badges (
 );
 
 CREATE TABLE user_badges (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   badge_id    UUID NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
   earned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -583,7 +583,7 @@ CREATE INDEX idx_user_badges_user_id ON user_badges(user_id);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE xp_logs (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   amount      INTEGER NOT NULL,
   source      TEXT NOT NULL,
@@ -600,7 +600,7 @@ CREATE INDEX idx_xp_logs_created_at ON xp_logs(user_id, created_at DESC);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE user_progress_body_areas (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   area        body_area NOT NULL,
   total_xp    INTEGER NOT NULL DEFAULT 0,
@@ -616,7 +616,7 @@ CREATE INDEX idx_progress_user_id ON user_progress_body_areas(user_id);
 -- ─────────────────────────────────────────────
 
 CREATE TABLE admin_actions (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id        UUID NOT NULL REFERENCES auth.users(id),
   action_type     admin_action_type NOT NULL,
   target_type     TEXT NOT NULL,

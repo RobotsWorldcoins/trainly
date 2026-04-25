@@ -61,7 +61,7 @@ export default function PlansScreen() {
       const { clientSecret } = await initiateSubscription(plan, session.access_token);
 
       const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'Trainly',
+        merchantDisplayName: 'TrainyX',
         paymentIntentClientSecret: clientSecret,
         defaultBillingDetails: { name: profile?.display_name },
         appearance: { colors: { primary: '#1B6FEB' } },

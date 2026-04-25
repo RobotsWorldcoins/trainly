@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Colors } from '@constants/colors';
 import { FontFamily, FontSize, Spacing, BorderRadius } from '@constants/typography';
 import { useMapStore } from '@stores/map.store';
-import { SESSION_CATEGORIES } from '@trainly/shared';
+import { SESSION_CATEGORIES } from '@trainyx/shared';
 
 interface MapFiltersSheetProps {
   visible: boolean;
