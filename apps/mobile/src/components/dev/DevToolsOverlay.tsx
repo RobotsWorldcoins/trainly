@@ -8,13 +8,19 @@ import { Colors } from '@constants/colors';
 import { FontFamily, FontSize, Spacing, BorderRadius } from '@constants/typography';
 import { UserRole } from '@trainyx/shared';
 
+// Real admin account — credentials come from .env (gitignored), never from source code
+const ADMIN_EMAIL = process.env.EXPO_PUBLIC_DEV_EMAIL ?? '';
+const ADMIN_PASSWORD = process.env.EXPO_PUBLIC_DEV_PASSWORD ?? '';
+
 const DEV_ACCOUNTS = [
-  { role: 'user_free' as UserRole, email: 'dev.free@trainyx.app', label: '👤 User Free', color: '#6B7A99' },
-  { role: 'user_plus' as UserRole, email: 'dev.plus@trainyx.app', label: '⭐ User Plus', color: '#F5A623' },
-  { role: 'trainer_pending' as UserRole, email: 'dev.pending@trainyx.app', label: '⏳ Trainer Pending', color: '#F59E0B' },
-  { role: 'trainer' as UserRole, email: 'dev.trainer@trainyx.app', label: '✅ Trainer', color: '#1B6FEB' },
-  { role: 'coach_pro' as UserRole, email: 'dev.coach@trainyx.app', label: '🏆 Coach Pro', color: '#7C3AED' },
-  { role: 'admin' as UserRole, email: 'dev.admin@trainyx.app', label: '🛡️ Admin', color: '#EF4444' },
+  // Real admin — populated from .env (EXPO_PUBLIC_DEV_EMAIL / EXPO_PUBLIC_DEV_PASSWORD)
+  { role: 'admin' as UserRole, email: ADMIN_EMAIL, label: '🛡️ Admin (real)', color: '#EF4444', password: ADMIN_PASSWORD },
+  // Seeded test accounts — all use DEV_PASSWORD below
+  { role: 'user_free' as UserRole, email: 'dev.free@trainyx.app', label: '👤 User Free', color: '#6B7A99', password: null },
+  { role: 'user_plus' as UserRole, email: 'dev.plus@trainyx.app', label: '⭐ User Plus', color: '#F5A623', password: null },
+  { role: 'trainer_pending' as UserRole, email: 'dev.pending@trainyx.app', label: '⏳ Trainer Pending', color: '#F59E0B', password: null },
+  { role: 'trainer' as UserRole, email: 'dev.trainer@trainyx.app', label: '✅ Trainer', color: '#1B6FEB', password: null },
+  { role: 'coach_pro' as UserRole, email: 'dev.coach@trainyx.app', label: '🏆 Coach Pro', color: '#7C3AED', password: null },
 ] as const;
 
 const DEV_PASSWORD = 'TrainyX2024!';
@@ -23,8 +29,9 @@ export function DevToolsOverlay() {
   const [expanded, setExpanded] = useState(false);
   const { effectiveRole, setDevRoleOverride, devRoleOverride, session, signOut } = useAuthStore();
 
-  const handleQuickLogin = async (email: string) => {
-    await supabase.auth.signInWithPassword({ email, password: DEV_PASSWORD });
+  const handleQuickLogin = async (email: string, customPassword?: string | null) => {
+    if (!email) return;
+    await supabase.auth.signInWithPassword({ email, password: customPassword ?? DEV_PASSWORD });
     setExpanded(false);
   };
 
@@ -66,7 +73,7 @@ export function DevToolsOverlay() {
               <Pressable
                 key={acc.role}
                 style={[styles.accountButton, { borderLeftColor: acc.color }]}
-                onPress={() => handleQuickLogin(acc.email)}
+                onPress={() => handleQuickLogin(acc.email, acc.password)}
               >
                 <Text style={styles.accountLabel}>{acc.label}</Text>
                 <Text style={styles.accountEmail}>{acc.email}</Text>
