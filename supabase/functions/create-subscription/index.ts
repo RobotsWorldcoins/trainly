@@ -13,11 +13,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Map plan keys to Stripe Price IDs (set in Stripe dashboard, reference via env)
-const PRICE_IDS: Record<string, string> = {
-  user_plus: Deno.env.get('STRIPE_PRICE_USER_PLUS') || '',
-  trainer: Deno.env.get('STRIPE_PRICE_TRAINER') || '',
-  coach_pro: Deno.env.get('STRIPE_PRICE_COACH_PRO') || '',
+// ─── Price ID map ──────────────────────────────────────────────────────────
+// Create these prices in your Stripe Dashboard and add the IDs as edge function secrets:
+//   STRIPE_PRICE_USER_PLUS_MONTHLY   — €4,99/month recurring
+//   STRIPE_PRICE_USER_PLUS_ANNUAL    — €39,99/year one-time OR recurring
+//   STRIPE_PRICE_TRAINER_MONTHLY     — €19/month recurring
+//   STRIPE_PRICE_TRAINER_ANNUAL      — €159/year recurring
+//   STRIPE_PRICE_COACH_PRO_MONTHLY   — €39/month recurring
+//   STRIPE_PRICE_COACH_PRO_ANNUAL    — €319/year recurring
+const PRICE_MAP: Record<string, string> = {
+  price_user_plus_monthly:  Deno.env.get('STRIPE_PRICE_USER_PLUS_MONTHLY')  ?? '',
+  price_user_plus_annual:   Deno.env.get('STRIPE_PRICE_USER_PLUS_ANNUAL')   ?? '',
+  price_trainer_monthly:    Deno.env.get('STRIPE_PRICE_TRAINER_MONTHLY')    ?? '',
+  price_trainer_annual:     Deno.env.get('STRIPE_PRICE_TRAINER_ANNUAL')     ?? '',
+  price_coach_pro_monthly:  Deno.env.get('STRIPE_PRICE_COACH_PRO_MONTHLY')  ?? '',
+  price_coach_pro_annual:   Deno.env.get('STRIPE_PRICE_COACH_PRO_ANNUAL')   ?? '',
+};
+
+// One-time amounts in cents (fallback if Stripe price ID not yet configured)
+const ONE_TIME_AMOUNTS: Record<string, number> = {
+  price_user_plus_monthly: 499,
+  price_user_plus_annual:  3999,
 };
 
 serve(async (req) => {
@@ -26,18 +42,29 @@ serve(async (req) => {
   }
 
   try {
+    // ── Auth ──────────────────────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (authError || !user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
-
-    const { plan } = await req.json();
-    if (!plan || !PRICE_IDS[plan]) {
-      return new Response(JSON.stringify({ error: `Unknown plan: ${plan}` }), { status: 400, headers: corsHeaders });
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
-    // Get/create Stripe customer (profiles use user_id FK, not id = auth user id)
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+    }
+
+    // ── Payload ───────────────────────────────────────────────────────────
+    const body = await req.json();
+    const priceKey: string = body.priceKey ?? body.plan; // backwards-compatible
+    const billing: 'monthly' | 'annual' = body.billing ?? 'monthly';
+
+    if (!priceKey) {
+      return new Response(JSON.stringify({ error: 'priceKey required' }), { status: 400, headers: corsHeaders });
+    }
+
+    // ── Customer ──────────────────────────────────────────────────────────
     const { data: profile } = await supabase
       .from('profiles')
       .select('id, display_name, stripe_customer_id')
@@ -48,43 +75,52 @@ serve(async (req) => {
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email,
-        name: profile?.display_name,
+        name: profile?.display_name ?? '',
         metadata: { supabase_user_id: user.id },
       });
       customerId = customer.id;
-      await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('user_id', user.id);
+      await supabase
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('user_id', user.id);
     }
 
-    const priceId = PRICE_IDS[plan];
+    const stripePriceId = PRICE_MAP[priceKey];
+    const isUserPlus = priceKey.startsWith('price_user_plus');
 
-    // User Plus is a one-time payment, not a subscription
-    if (plan === 'user_plus') {
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: 499, // €4.99
+    // ── User Plus: one-time payment ───────────────────────────────────────
+    if (isUserPlus) {
+      const amount = ONE_TIME_AMOUNTS[priceKey] ?? 499;
+      const intent = await stripe.paymentIntents.create({
+        amount,
         currency: 'eur',
         customer: customerId,
-        description: 'Trainly User Plus — 365 days',
-        metadata: {
-          plan: 'user_plus',
-          user_id: user.id,
-        },
+        description: `TrainyX User Plus — ${billing === 'annual' ? 'Anual' : 'Mensal'}`,
+        metadata: { plan: 'user_plus', billing, user_id: user.id },
         automatic_payment_methods: { enabled: true },
       });
 
       return new Response(
-        JSON.stringify({ clientSecret: paymentIntent.client_secret }),
+        JSON.stringify({ clientSecret: intent.client_secret }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Trainer / Coach Pro: recurring subscription
+    // ── Trainer / Coach Pro: recurring subscription ───────────────────────
+    if (!stripePriceId) {
+      return new Response(
+        JSON.stringify({ error: `Stripe price not configured for key: ${priceKey}` }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
-      items: [{ price: priceId }],
+      items: [{ price: stripePriceId }],
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent'],
-      metadata: { plan, user_id: user.id },
+      metadata: { priceKey, billing, user_id: user.id },
     });
 
     const invoice = subscription.latest_invoice as any;
@@ -95,7 +131,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
-    console.error('create-subscription error:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    console.error('[create-subscription]', err);
+    return new Response(
+      JSON.stringify({ error: err.message ?? 'Internal error' }),
+      { status: 500, headers: corsHeaders }
+    );
   }
 });

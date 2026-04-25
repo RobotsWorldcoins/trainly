@@ -1,99 +1,167 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert,
+  View, Text, StyleSheet, ScrollView, Pressable,
+  ActivityIndicator, Alert, Switch, Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '@lib/supabase';
 import { useAuthStore } from '@stores/auth.store';
 import { Colors } from '@constants/colors';
-import { FontFamily, FontSize, Spacing, BorderRadius, Shadow } from '@constants/typography';
+import { FontFamily } from '@constants/typography';
 
-async function initiateSubscription(plan: string, accessToken: string) {
+const { width: SCREEN_W } = Dimensions.get('window');
+
+// ─── Pricing ───────────────────────────────────────────────────────────────
+const PLANS = {
+  user_plus: {
+    id: 'user_plus',
+    emoji: '⭐',
+    name: 'User Plus',
+    tagline: 'Para utilizadores ativos',
+    monthly:  { price: 4.99,  label: '€4,99', period: '/mês',  saving: null, stripeKey: 'price_user_plus_monthly' },
+    annual:   { price: 39.99, label: '€39,99', period: '/ano', saving: '33%', stripeKey: 'price_user_plus_annual' },
+    color: '#F5A623',
+    accent: '#FFF3DC',
+    features: [
+      '✓  Criar grupos de atividade social',
+      '✓  Acesso a sessões exclusivas',
+      '✓  Prioridade nas reservas',
+      '✓  Perfil verificado no mapa',
+      '✓  Histórico ilimitado de sessões',
+      '✓  Insígnias e XP bónus',
+    ],
+  },
+  trainer: {
+    id: 'trainer',
+    emoji: '🏋️',
+    name: 'Trainer',
+    tagline: 'Até 15 clientes ativos',
+    monthly:  { price: 19,   label: '€19',   period: '/mês', saving: null, stripeKey: 'price_trainer_monthly' },
+    annual:   { price: 159,  label: '€159',  period: '/ano', saving: '30%', stripeKey: 'price_trainer_annual' },
+    color: '#1B6FEB',
+    accent: '#EFF6FF',
+    featured: true,
+    features: [
+      '✓  Criar sessões pagas ilimitadas',
+      '✓  Receber pagamentos via Stripe',
+      '✓  Painel de treinador completo',
+      '✓  Programa de treino p/ clientes',
+      '✓  Entrega automática de programas',
+      '✓  Métricas e progresso dos clientes',
+      '✓  Mensagens in-app com clientes',
+      '✓  Integração Apple Health / Garmin',
+      '✓  Sessões em destaque no mapa',
+    ],
+  },
+  coach_pro: {
+    id: 'coach_pro',
+    emoji: '🚀',
+    name: 'Coach Pro',
+    tagline: 'Clientes ilimitados + IA',
+    monthly:  { price: 39,   label: '€39',   period: '/mês', saving: null, stripeKey: 'price_coach_pro_monthly' },
+    annual:   { price: 319,  label: '€319',  period: '/ano', saving: '32%', stripeKey: 'price_coach_pro_annual' },
+    color: '#7C3AED',
+    accent: '#F5F3FF',
+    features: [
+      '✓  Tudo do plano Trainer',
+      '✓  Clientes ilimitados',
+      '✓  AI Workout Builder',
+      '✓  Tracking nutrição e hábitos',
+      '✓  Analytics avançados de receita',
+      '✓  Check-in automático via GPS',
+      '✓  Badge Coach Pro no perfil',
+      '✓  Perfil destacado no mapa',
+      '✓  Suporte prioritário 24/7',
+      '✓  White-label (marca própria)',
+    ],
+  },
+} as const;
+
+type PlanKey = keyof typeof PLANS;
+
+// ─── API call ──────────────────────────────────────────────────────────────
+async function startCheckout(priceKey: string, accessToken: string, billing: 'monthly' | 'annual') {
   const res = await fetch(
     `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-subscription`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ priceKey, billing }),
     }
   );
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Erro ao criar subscrição');
-  return data;
+  if (!res.ok) throw new Error(data.error ?? 'Erro ao criar subscrição');
+  return data as { clientSecret: string; subscriptionId: string };
 }
 
-const USER_PLUS_FEATURES = [
-  'Criar grupos de atividade social',
-  'Acesso a sessões exclusivas User Plus',
-  'Prioridade nas reservas',
-  'Validade de 365 dias',
-];
-
-const TRAINER_FEATURES = [
-  'Criar até 2 sessões pagas por semana',
-  'Receber pagamentos via Stripe',
-  'Painel de treinador completo',
-  'Suporte prioritário',
-];
-
-const COACH_PRO_FEATURES = [
-  'Criar até 7 sessões pagas por semana',
-  'Todas as funcionalidades Trainer',
-  'Sessões em destaque no mapa',
-  'Badge Coach Pro no perfil',
-  'Analytics avançados',
-];
-
+// ─── Screen ────────────────────────────────────────────────────────────────
 export default function PlansScreen() {
-  const { user, profile, hasUserPlus, isTrainer } = useAuthStore();
+  const { profile, hasUserPlus } = useAuthStore();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [annual, setAnnual] = useState(false);
+  const [loading, setLoading] = useState<PlanKey | null>(null);
 
-  const handleSubscribe = async (plan: string) => {
-    setLoadingPlan(plan);
+  const isActive = (planId: PlanKey) => {
+    if (planId === 'user_plus') return hasUserPlus();
+    if (planId === 'trainer') return profile?.role === 'trainer' || profile?.role === 'coach_pro';
+    if (planId === 'coach_pro') return profile?.role === 'coach_pro';
+    return false;
+  };
+
+  const handleSubscribe = async (planKey: PlanKey) => {
+    setLoading(planKey);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const { clientSecret } = await initiateSubscription(plan, session.access_token);
+      const tier = PLANS[planKey];
+      const billing = annual ? 'annual' : 'monthly';
+      const priceKey = tier[billing].stripeKey;
 
-      const { error: initError } = await initPaymentSheet({
+      const { clientSecret } = await startCheckout(priceKey, session.access_token, billing);
+
+      const { error: initErr } = await initPaymentSheet({
         merchantDisplayName: 'TrainyX',
         paymentIntentClientSecret: clientSecret,
-        defaultBillingDetails: { name: profile?.display_name },
-        appearance: { colors: { primary: '#1B6FEB' } },
+        defaultBillingDetails: { name: profile?.display_name ?? '' },
+        appearance: {
+          colors: { primary: tier.color, background: '#0A0F1E', componentBackground: '#141928', primaryText: '#FFFFFF', secondaryText: 'rgba(255,255,255,0.6)', componentText: '#FFFFFF', placeholderText: 'rgba(255,255,255,0.4)' },
+        },
       });
+      if (initErr) throw new Error(initErr.message);
 
-      if (initError) throw new Error(initError.message);
-
-      const { error: paymentError } = await presentPaymentSheet();
-
-      if (paymentError) {
-        if (paymentError.code !== 'Canceled') {
-          Alert.alert('Erro', paymentError.message);
-        }
+      const { error: payErr } = await presentPaymentSheet();
+      if (payErr) {
+        if (payErr.code !== 'Canceled') Alert.alert('Erro no pagamento', payErr.message);
         return;
       }
 
-      Alert.alert(
-        'Subscrição ativada!',
-        'O teu plano foi ativado com sucesso. Aproveita!',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+      Alert.alert('🎉 Plano ativado!', `O teu plano ${tier.name} ${billing === 'annual' ? 'anual' : 'mensal'} foi ativado. Aproveita!`, [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
     } catch (err: any) {
-      Alert.alert('Erro', err.message || 'Não foi possível processar o pagamento.');
+      Alert.alert('Erro', err.message ?? 'Não foi possível processar o pagamento.');
     } finally {
-      setLoadingPlan(null);
+      setLoading(null);
+    }
+  };
+
+  const handleTrainerCTA = (planKey: PlanKey) => {
+    const role = profile?.role;
+    if (planKey === 'trainer' && (role === 'user_free' || role === 'user_plus')) {
+      router.push('/(app)/trainer/apply');
+    } else {
+      handleSubscribe(planKey);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backIcon}>←</Text>
         </Pressable>
         <Text style={styles.headerTitle}>Planos</Text>
@@ -101,225 +169,226 @@ export default function PlansScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Text style={styles.pageTitle}>Eleva a tua experiência</Text>
-        <Text style={styles.pageSubtitle}>Escolhe o plano certo para ti</Text>
+        {/* Hero */}
+        <Text style={styles.heroTitle}>Escolhe o teu plano</Text>
+        <Text style={styles.heroSub}>Cancela quando quiseres. Sem contratos.</Text>
 
-        {/* User Plus */}
-        <View style={styles.planCard}>
-          <View style={styles.planHeader}>
-            <Text style={styles.planEmoji}>⭐</Text>
-            <View style={styles.planInfo}>
-              <Text style={styles.planName}>User Plus</Text>
-              <Text style={styles.planDesc}>Para utilizadores ativos</Text>
-            </View>
-            <View style={styles.planPriceBox}>
-              <Text style={styles.planPrice}>€4,99</Text>
-              <Text style={styles.planPricePeriod}>único</Text>
-            </View>
-          </View>
-
-          <View style={styles.featureList}>
-            {USER_PLUS_FEATURES.map(f => (
-              <View key={f} style={styles.featureRow}>
-                <Text style={styles.featureCheck}>✓</Text>
-                <Text style={styles.featureText}>{f}</Text>
-              </View>
-            ))}
-          </View>
-
-          {hasUserPlus() ? (
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>✓ Plano ativo</Text>
-            </View>
-          ) : (
-            <Pressable
-              style={[styles.planBtn, loadingPlan === 'user_plus' && styles.planBtnDisabled]}
-              onPress={() => handleSubscribe('user_plus')}
-              disabled={!!loadingPlan}
-            >
-              {loadingPlan === 'user_plus' ? (
-                <ActivityIndicator color={Colors.primary} />
-              ) : (
-                <Text style={styles.planBtnText}>Ativar User Plus</Text>
-              )}
-            </Pressable>
-          )}
+        {/* Billing toggle */}
+        <View style={styles.toggleRow}>
+          <Text style={[styles.toggleLabel, !annual && styles.toggleLabelActive]}>Mensal</Text>
+          <Switch
+            value={annual}
+            onValueChange={setAnnual}
+            trackColor={{ false: 'rgba(255,255,255,0.15)', true: '#1B6FEB' }}
+            thumbColor="#FFFFFF"
+            style={{ marginHorizontal: 10 }}
+          />
+          <Text style={[styles.toggleLabel, annual && styles.toggleLabelActive]}>
+            Anual{' '}
+            <Text style={styles.toggleSaving}>POUPA ATÉ 33%</Text>
+          </Text>
         </View>
 
-        {/* Trainer */}
-        <View style={[styles.planCard, styles.planCardTrainer]}>
-          <LinearGradient colors={['#1B6FEB', '#0F4FA8']} style={styles.planGradient}>
-            <View style={styles.planHeader}>
-              <Text style={styles.planEmoji}>🏋️</Text>
-              <View style={styles.planInfo}>
-                <Text style={[styles.planName, styles.planNameLight]}>Trainer</Text>
-                <Text style={[styles.planDesc, styles.planDescLight]}>Para treinadores</Text>
-              </View>
-              <View style={styles.planPriceBox}>
-                <Text style={[styles.planPrice, styles.planPriceLight]}>€19</Text>
-                <Text style={[styles.planPricePeriod, styles.planPricePeriodLight]}>/mês</Text>
-              </View>
-            </View>
+        {/* Plan cards */}
+        {(Object.keys(PLANS) as PlanKey[]).map(key => {
+          const plan = PLANS[key];
+          const tier = annual ? plan.annual : plan.monthly;
+          const active = isActive(key);
 
-            <View style={styles.featureList}>
-              {TRAINER_FEATURES.map(f => (
-                <View key={f} style={styles.featureRow}>
-                  <Text style={[styles.featureCheck, styles.featureCheckLight]}>✓</Text>
-                  <Text style={[styles.featureText, styles.featureTextLight]}>{f}</Text>
+          return (
+            <View
+              key={key}
+              style={[
+                styles.planCard,
+                plan.featured && styles.planCardFeatured,
+                { borderColor: plan.color + '40' },
+              ]}
+            >
+              {/* Popular badge */}
+              {plan.featured && (
+                <View style={[styles.popularBadge, { backgroundColor: plan.color }]}>
+                  <Text style={styles.popularText}>MAIS POPULAR</Text>
                 </View>
-              ))}
-            </View>
-
-            {profile?.role === 'trainer' ? (
-              <View style={[styles.activeBadge, styles.activeBadgeLight]}>
-                <Text style={[styles.activeBadgeText, styles.activeBadgeTextLight]}>✓ Plano ativo</Text>
-              </View>
-            ) : (
-              <Pressable
-                style={[styles.planBtnLight, loadingPlan === 'trainer' && styles.planBtnDisabled]}
-                onPress={() => {
-                  if (profile?.role === 'user_free' || profile?.role === 'user_plus') {
-                    router.push('/(app)/trainer/apply');
-                  } else {
-                    handleSubscribe('trainer');
-                  }
-                }}
-                disabled={!!loadingPlan}
-              >
-                {loadingPlan === 'trainer' ? (
-                  <ActivityIndicator color={Colors.primary} />
-                ) : (
-                  <Text style={styles.planBtnTextDark}>
-                    {profile?.role === 'trainer_pending' ? 'Candidatura pendente' : 'Tornar-me treinador'}
-                  </Text>
-                )}
-              </Pressable>
-            )}
-          </LinearGradient>
-        </View>
-
-        {/* Coach Pro */}
-        <View style={styles.planCard}>
-          <View style={styles.proBadge}>
-            <Text style={styles.proBadgeText}>MAIS POPULAR</Text>
-          </View>
-          <View style={styles.planHeader}>
-            <Text style={styles.planEmoji}>🚀</Text>
-            <View style={styles.planInfo}>
-              <Text style={styles.planName}>Coach Pro</Text>
-              <Text style={styles.planDesc}>Para profissionais sérios</Text>
-            </View>
-            <View style={styles.planPriceBox}>
-              <Text style={styles.planPrice}>€39</Text>
-              <Text style={styles.planPricePeriod}>/mês</Text>
-            </View>
-          </View>
-
-          <View style={styles.featureList}>
-            {COACH_PRO_FEATURES.map(f => (
-              <View key={f} style={styles.featureRow}>
-                <Text style={[styles.featureCheck, { color: Colors.accent }]}>✓</Text>
-                <Text style={styles.featureText}>{f}</Text>
-              </View>
-            ))}
-          </View>
-
-          {profile?.role === 'coach_pro' ? (
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>✓ Plano ativo</Text>
-            </View>
-          ) : (
-            <Pressable
-              style={[styles.planBtnAccent, loadingPlan === 'coach_pro' && styles.planBtnDisabled]}
-              onPress={() => handleSubscribe('coach_pro')}
-              disabled={!!loadingPlan}
-            >
-              {loadingPlan === 'coach_pro' ? (
-                <ActivityIndicator color={Colors.textInverse} />
-              ) : (
-                <Text style={styles.planBtnText}>Ativar Coach Pro</Text>
               )}
-            </Pressable>
-          )}
+
+              {/* Plan header */}
+              <View style={styles.planTop}>
+                <View style={[styles.planIconBg, { backgroundColor: plan.color + '20' }]}>
+                  <Text style={styles.planEmoji}>{plan.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.planName}>{plan.name}</Text>
+                  <Text style={styles.planTagline}>{plan.tagline}</Text>
+                </View>
+                <View style={styles.priceBox}>
+                  {annual && tier.saving && (
+                    <View style={[styles.savingChip, { backgroundColor: plan.color + '20' }]}>
+                      <Text style={[styles.savingText, { color: plan.color }]}>-{tier.saving}</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.priceVal, { color: plan.color }]}>{tier.label}</Text>
+                  <Text style={styles.pricePeriod}>{tier.period}</Text>
+                </View>
+              </View>
+
+              {/* Annual equivalent */}
+              {annual && (
+                <Text style={styles.perMonthNote}>
+                  ≈ €{(plan.annual.price / 12).toFixed(2)}/mês · faturado anualmente
+                </Text>
+              )}
+
+              {/* Features */}
+              <View style={styles.featureList}>
+                {plan.features.map(f => (
+                  <View key={f} style={styles.featureRow}>
+                    <Text style={[styles.featureDot, { color: plan.color }]}>✓</Text>
+                    <Text style={styles.featureText}>{f.replace('✓  ', '')}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* CTA */}
+              {active ? (
+                <View style={[styles.activePill, { backgroundColor: plan.color + '15', borderColor: plan.color + '40' }]}>
+                  <Text style={[styles.activeText, { color: plan.color }]}>✓ Plano ativo</Text>
+                </View>
+              ) : (
+                <Pressable
+                  style={[styles.ctaBtn, { backgroundColor: plan.color }, loading === key && styles.ctaBtnDisabled]}
+                  onPress={() => handleTrainerCTA(key)}
+                  disabled={!!loading}
+                >
+                  {loading === key ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.ctaText}>
+                      {key === 'trainer' && (profile?.role === 'user_free' || profile?.role === 'user_plus')
+                        ? 'Candidatar-me a Trainer'
+                        : `Ativar ${plan.name}`}
+                    </Text>
+                  )}
+                </Pressable>
+              )}
+            </View>
+          );
+        })}
+
+        {/* Comparison footnote */}
+        <View style={styles.compareBox}>
+          <Text style={styles.compareTitle}>Incluído em todos os planos</Text>
+          {['Perfil verificado no mapa', 'Histórico de sessões', 'Sistema de XP e níveis', 'Suporte via chat', 'App iOS e Android'].map(f => (
+            <View key={f} style={styles.compareRow}>
+              <Text style={styles.compareCheck}>✓</Text>
+              <Text style={styles.compareText}>{f}</Text>
+            </View>
+          ))}
         </View>
 
         <Text style={styles.disclaimer}>
-          Pagamentos seguros processados por Stripe. Cancela quando quiseres.
+          🔒 Pagamentos seguros via Stripe · Cancela a qualquer momento sem custos · Preços incluem IVA
         </Text>
+
+        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── Styles ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: '#0A0F1E' },
+
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing[5], paddingVertical: Spacing[4],
-    backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border,
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
   },
-  backBtn: { width: 40, height: 40, justifyContent: 'center' },
-  backIcon: { fontSize: FontSize.xl, color: Colors.text },
-  headerTitle: { fontSize: FontSize.md, fontFamily: FontFamily.bold, color: Colors.text },
-  scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: 40 },
-  pageTitle: { fontSize: FontSize['2xl'], fontFamily: FontFamily.extrabold, color: Colors.text, textAlign: 'center' },
-  pageSubtitle: { fontSize: FontSize.base, fontFamily: FontFamily.regular, color: Colors.textSecondary, textAlign: 'center', marginTop: -8 },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' },
+  backIcon: { fontSize: 20, color: '#FFFFFF' },
+  headerTitle: { fontSize: 18, fontFamily: FontFamily.bold, color: '#FFFFFF' },
+
+  scroll: { padding: 18, gap: 16 },
+
+  heroTitle: { fontSize: 26, fontFamily: FontFamily.bold, color: '#FFFFFF', textAlign: 'center' },
+  heroSub: { fontSize: 13, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 4 },
+
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#141928', borderRadius: 20, padding: 14, marginVertical: 4 },
+  toggleLabel: { fontSize: 14, fontFamily: FontFamily.medium, color: 'rgba(255,255,255,0.4)' },
+  toggleLabelActive: { color: '#FFFFFF', fontFamily: FontFamily.bold },
+  toggleSaving: { fontSize: 10, fontFamily: FontFamily.bold, color: '#30D158' },
+
   planCard: {
-    backgroundColor: Colors.surface, borderRadius: BorderRadius.xl,
-    padding: Spacing[5], ...Shadow.md, gap: Spacing[4],
-    borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: '#141928',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1.5,
+    gap: 14,
+    marginTop: 4,
   },
-  planCardTrainer: { padding: 0, overflow: 'hidden', borderWidth: 0 },
-  planGradient: { padding: Spacing[5], gap: Spacing[4], borderRadius: BorderRadius.xl },
-  planHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing[3] },
-  planEmoji: { fontSize: 32 },
-  planInfo: { flex: 1 },
-  planName: { fontSize: FontSize.lg, fontFamily: FontFamily.bold, color: Colors.text },
-  planNameLight: { color: Colors.textInverse },
-  planDesc: { fontSize: FontSize.sm, fontFamily: FontFamily.regular, color: Colors.textSecondary },
-  planDescLight: { color: 'rgba(255,255,255,0.7)' },
-  planPriceBox: { alignItems: 'flex-end' },
-  planPrice: { fontSize: FontSize.xl, fontFamily: FontFamily.extrabold, color: Colors.primary },
-  planPriceLight: { color: Colors.textInverse },
-  planPricePeriod: { fontSize: FontSize.xs, fontFamily: FontFamily.regular, color: Colors.textMuted },
-  planPricePeriodLight: { color: 'rgba(255,255,255,0.6)' },
-  featureList: { gap: Spacing[2] },
-  featureRow: { flexDirection: 'row', gap: Spacing[2], alignItems: 'flex-start' },
-  featureCheck: { fontSize: FontSize.sm, fontFamily: FontFamily.bold, color: Colors.primary, marginTop: 1 },
-  featureCheckLight: { color: 'rgba(255,255,255,0.9)' },
-  featureText: { flex: 1, fontSize: FontSize.sm, fontFamily: FontFamily.regular, color: Colors.text },
-  featureTextLight: { color: 'rgba(255,255,255,0.9)' },
-  planBtn: {
-    backgroundColor: Colors.primaryLight, borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing[3], alignItems: 'center',
-    borderWidth: 1.5, borderColor: Colors.primary,
+  planCardFeatured: {
+    borderWidth: 2,
+    shadowColor: '#1B6FEB',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
-  planBtnLight: {
-    backgroundColor: Colors.textInverse, borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing[3], alignItems: 'center',
+  popularBadge: {
+    position: 'absolute',
+    top: -12,
+    right: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    zIndex: 1,
   },
-  planBtnAccent: {
-    backgroundColor: Colors.accent, borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing[3], alignItems: 'center',
+  popularText: { fontSize: 10, fontFamily: FontFamily.bold, color: '#FFFFFF', letterSpacing: 0.5 },
+
+  planTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  planIconBg: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  planEmoji: { fontSize: 26 },
+  planName: { fontSize: 18, fontFamily: FontFamily.bold, color: '#FFFFFF' },
+  planTagline: { fontSize: 12, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.45)', marginTop: 2 },
+
+  priceBox: { alignItems: 'flex-end', gap: 2 },
+  savingChip: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  savingText: { fontSize: 11, fontFamily: FontFamily.bold },
+  priceVal: { fontSize: 22, fontFamily: FontFamily.bold },
+  pricePeriod: { fontSize: 11, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.4)' },
+
+  perMonthNote: { fontSize: 11, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.35)', textAlign: 'center' },
+
+  featureList: { gap: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)', paddingTop: 14 },
+  featureRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  featureDot: { fontSize: 13, fontFamily: FontFamily.bold, marginTop: 1 },
+  featureText: { flex: 1, fontSize: 13, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.75)', lineHeight: 19 },
+
+  ctaBtn: { borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
+  ctaBtnDisabled: { opacity: 0.5 },
+  ctaText: { fontSize: 15, fontFamily: FontFamily.bold, color: '#FFFFFF' },
+
+  activePill: { borderRadius: 14, paddingVertical: 12, alignItems: 'center', borderWidth: 1 },
+  activeText: { fontSize: 14, fontFamily: FontFamily.bold },
+
+  compareBox: {
+    backgroundColor: '#141928',
+    borderRadius: 20,
+    padding: 18,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
   },
-  planBtnDisabled: { opacity: 0.5 },
-  planBtnText: { fontSize: FontSize.base, fontFamily: FontFamily.bold, color: Colors.primary },
-  planBtnTextDark: { fontSize: FontSize.base, fontFamily: FontFamily.bold, color: Colors.primary },
-  activeBadge: {
-    backgroundColor: Colors.successLight, borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing[3], alignItems: 'center',
-  },
-  activeBadgeLight: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  activeBadgeText: { fontSize: FontSize.base, fontFamily: FontFamily.bold, color: Colors.success },
-  activeBadgeTextLight: { color: Colors.textInverse },
-  proBadge: {
-    position: 'absolute', top: -12, right: Spacing[5],
-    backgroundColor: Colors.accent, borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing[3], paddingVertical: 4, zIndex: 1,
-  },
-  proBadgeText: { fontSize: 10, fontFamily: FontFamily.extrabold, color: Colors.textInverse, letterSpacing: 0.5 },
+  compareTitle: { fontSize: 13, fontFamily: FontFamily.bold, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: 4 },
+  compareRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  compareCheck: { fontSize: 13, color: '#30D158', fontFamily: FontFamily.bold },
+  compareText: { fontSize: 13, fontFamily: FontFamily.regular, color: 'rgba(255,255,255,0.6)' },
+
   disclaimer: {
-    fontSize: FontSize.xs, fontFamily: FontFamily.regular,
-    color: Colors.textMuted, textAlign: 'center',
+    fontSize: 11,
+    fontFamily: FontFamily.regular,
+    color: 'rgba(255,255,255,0.3)',
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });
